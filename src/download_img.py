@@ -13,7 +13,7 @@ outdir = '../out'
 imgdir = '../out/colombia/'
 
 # Use your Google Static Maps API key
-key = "AIzaSyCaE-7H7K4QZdO8KWgcKGFd12y2nZhDe7g"
+key = ""
 
 # Parse the shapefiles to find census tract boundaries and map it to a square grid 
 # to extract latitude-longitude pairs for download locations.
