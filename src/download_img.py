@@ -2,7 +2,8 @@ from raycast import *
 import urllib.request, urllib.error
 import os, json, csv, sys
 import numpy as np
-
+import argparse
+from pathlib import Path
 maptype = "satellite"
 size = "400x400"
 zoom = "18"
@@ -15,7 +16,7 @@ imgdir = '../out/colombia/'
 # Use your Google Static Maps API key
 key = ""
 
-# Parse the shapefiles to find census tract boundaries and map it to a square grid 
+# Parse the shapefiles to find census tract boundaries and map it to a square grid
 # to extract latitude-longitude pairs for download locations.
 def getDownloadLocs(boundary_locs):
     p = Polygon([Point(l2, l1) for l1, l2 in boundary_locs])
@@ -66,7 +67,7 @@ def readObfile(obfile):
     return tractids, obvalues
 
 # Get download locations and write it to a csv file
-def writeLocations(geojsonfile):
+def writeLocations(geojsonfile, municipal):
 
     with open(geojsonfile, 'r') as f:
         shapes = json.load(f)
@@ -78,19 +79,23 @@ def writeLocations(geojsonfile):
 
     locs_by_tract = {}
     # boundary locations are in the counter clockwise direction
+    found = False
     for tract in shapes['features']:
         print('*', end = ', ')
         sys.stdout.flush()
-        boundary_locs = tract['geometry']['coordinates'][0] # for san-antonio
-        # boundary_locs = tract['geometry']['coordinates'][0][0] # for lacity
-        print(boundary_locs)
+        if tract["properties"]["NAME_2"] == municipal:
+            boundary_locs = tract['geometry']['coordinates'][0]
+
+            print("municipal: " , municipal, boundary_locs)
     #     print(boundary_locs)
-        boundary_locs.reverse()
-        tractid = tract['properties']['NAME_1'] + tract['properties']['NAME_2'] + str(tract['properties']['ID_2'])
-        locs = getDownloadLocs(boundary_locs)
-        locs_by_tract[tractid] = locs
-        #uncomment the break to run for all municipalities, currently it is not efficient for bigger polygons
-        break	
+            boundary_locs.reverse()
+            tractid = tract['properties']['NAME_1'] + tract['properties']['NAME_2'] + str(tract['properties']['ID_2'])
+            locs = getDownloadLocs(boundary_locs)
+            locs_by_tract[tractid] = locs
+            #uncomment the break to run for all municipalities, currently it is not efficient for bigger polygons
+            found = True
+        if found:
+            break
 
     f = open(os.path.join(datadir, city, 'download_' + city + '_tract_18_imgs_locs.csv'), 'w')
     locwriter = csv.writer(f)
@@ -149,11 +154,16 @@ def downloadImages(locfile):
     f.close()
 
 if __name__ == "__main__":
-
-
- 
-    geojsonfile = '../data/colombia/COL_adm2.json'
-    writeLocations(geojsonfile)
-
-    locfile = os.path.join(datadir, city, 'download_' + city + '_tract_18_imgs_locs.csv')
-    downloadImages(locfile)
+    parser = argparse.ArgumentParser( description=('program to download satellite imagery based on geojson and municipal'))
+    parser.add_argument('--geo_json_file', help=('geo json file path for columbia municipalities'))
+    parser.add_argument('--municipal', help='')
+    args = parser.parse_args()
+    if len(key) == 0:
+        print("error: please set google provide key");
+    else:
+        if (not args.municipal) or (not args.geo_json_file):
+            print("error: usage  python3 download_img.py --geo_json_file <file_path> --municipal <NAME_2 in json> ")
+        else:
+            writeLocations(args.geo_json_file,args.municipal)
+            locfile = os.path.join(datadir, city, 'download_' + city + '_tract_18_imgs_locs.csv')
+            downloadImages(locfile)
