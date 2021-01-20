@@ -1,6 +1,7 @@
 To run the program
 
-cd data/colombia
+cd data/colombia 
+
 gzip -d MPM_FuenteCensal_2018.json.gz
 
 cd ../../src
